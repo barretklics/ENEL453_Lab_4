@@ -48,8 +48,12 @@ module top_level
   assign Num_Hex4 = 4'b0000;
   assign Num_Hex5 = 4'b0000;   
   
-
-
+	//Mux modulation
+	logic [9:0] carry_sig;
+	logic [9:0] AM_sig;
+	logic [9:0] AM_damp_sig;
+	logic [9:0] FM_sig;
+	//logic [9:0] output_sig;
   
   
   
@@ -111,7 +115,17 @@ MUX4TO1 Mux_ins(.in1(switch_inputs),
 					.mux_out(mux_out)
 );
 	
+MUX4TO1 #(.width(10)) 
 
+Mod_Mux_ins(.in1(carry_sig),
+					.in2(AM_sig),
+					.in3(FM_sig),
+					.in4(AM_damp_sig),					
+					.s(sync_SW[9:8]),
+					.mux_out(DAC_bus)
+					);
+	
+	
  //SevenSegment SevenSegment_ins(.*); // (.*) doesn't work for VHDL files, and instance name was too long
  SevenSegment SevenSeg_ins(.Num_Hex0(Num_Hex0),
                             .Num_Hex1(Num_Hex1),
@@ -183,9 +197,9 @@ ADC_Data ADC_Data_ins(.clk(clk),
 
 	DDS_ins(.clk(clk), //system clock. Tuned to accept 500KHz
 				.reset_n(reset_n),
-				.en(dds_en),
+				.en(1),
 				.tuning_word(49), //Tuning word (how much to increment phase by. Max = LUT value. Space required 49
-				.amplitude(DAC_bus)
+				.amplitude(carry_sig)
 		
 	);
 	
@@ -201,6 +215,12 @@ ADC_Data ADC_Data_ins(.clk(clk),
 	assign D8 = DAC_bus[8];
 	assign D9 = DAC_bus[9];
 
+	
+	AM_mod AM_mod_ins(.clk(clk), .reset_n(reset_n), .en(en), .carry_sig(carry_sig), .distance(distance_bus), .AM_sig(AM_sig));
+	
+	AM_mod_damp AM_mod_damp_ins(.clk(clk), .reset_n(reset_n), .en(en), .carry_sig(carry_sig), .distance(distance_bus), .AM_damp_sig(AM_damp_sig));
+	
+	FM_mod FM_mod_ins(.clk(clk), .reset_n(reset_n), .en(en), .carry_sig(carry_sig), .distance(distance_bus), .FM_sig(FM_sig));
 		
 
 endmodule

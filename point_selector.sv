@@ -4,12 +4,12 @@ module point_selector
   
   always_comb
 	case(s)
-		2'b00 : p = 6'b000000;
-		2'b01 : p = 6'b000100; 
-      2'b10 : p = 6'b001000;
-		2'b11 : p = 6'b000000;
+		//2'b00 : p = 6'b000000;
+		//2'b01 : p = 6'b000100; 
+     // 2'b10 : p = 6'b001000;
+		//2'b11 : p = 6'b000000;
 		
-		default: p = 6'b000000;
+		default: p = 6'b000100;
 	endcase
 		
 		
