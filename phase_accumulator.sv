@@ -21,6 +21,7 @@ module phase_accumulator
 	 
     else if(EN) begin
 		if (phase >= phase_accum_len) //phase word
+		//	phase <= phase_accum_len - phase;
 			phase <= 0;
 		else 
 			phase <= phase + tuning_word;//1

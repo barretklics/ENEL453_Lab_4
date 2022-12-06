@@ -41,15 +41,20 @@ module top_level
  
   //Mux out code
   logic [15:0] mux_out;
-  assign Num_Hex0 = storage_out[3:0]; 
-  assign Num_Hex1 = storage_out[7:4];
-  assign Num_Hex2 = storage_out[11:8];
-  assign Num_Hex3 = storage_out[15:12];
+  assign Num_Hex0 = distance_decimal[3:0]; 
+  assign Num_Hex1 = distance_decimal[7:4];
+  assign Num_Hex2 = distance_decimal[11:8];
+  assign Num_Hex3 = distance_decimal[15:12];
   assign Num_Hex4 = 4'b0000;
   assign Num_Hex5 = 4'b0000;   
   
-
-
+	//Mux modulation
+	logic [9:0] carry_sig;
+	logic [9:0] AM_sig;
+	logic [9:0] AM_damp_sig;
+	logic [9:0] FM_sig;
+	logic [13-1:0] tuning_word;
+	//logic [9:0] output_sig;
   
   
   
@@ -72,7 +77,7 @@ module top_level
   	storage storage_ins(.clk(clk),
 							  .reset_n(reset_n),
 	
-							  .d(mux_out),
+							  .d(distance_bus),
 
 							  .enable(en),
 							  //.enable(key_enable),
@@ -103,15 +108,27 @@ module top_level
 
 	
 //MUX4TO1
+/*
 MUX4TO1 Mux_ins(.in1(switch_inputs),
 					.in2(distance_decimal),
-					.in3(voltage_decimal),
-					.in4(ADC_out),					
+					.in3(distance_decimal),
+					.in4(distance_decimal),					
 					.s(sync_SW[9:8]),
 					.mux_out(mux_out)
 );
+*/
 	
+MUX4TO1 #(.width(10)) 
 
+Mod_Mux_ins(.in1(carry_sig),
+					.in2(AM_sig),
+					.in3(FM_sig),
+					.in4(AM_damp_sig),					
+					.s(sync_SW[9:8]),
+					.mux_out(DAC_bus)
+					);
+	
+	
  //SevenSegment SevenSegment_ins(.*); // (.*) doesn't work for VHDL files, and instance name was too long
  SevenSegment SevenSeg_ins(.Num_Hex0(Num_Hex0),
                             .Num_Hex1(Num_Hex1),
@@ -127,15 +144,11 @@ MUX4TO1 Mux_ins(.in1(switch_inputs),
                             .Hex5(HEX5),
                             .DP_in(DP_in),
 									 .Blank(Blank));
- 
-binary_bcd binary_bcd_ins_voltage(.clk(clk),                          
-                            .reset_n(reset_n),                                 
-                            .binary(voltage_bus),    
-                            .bcd(voltage_decimal));
+
 									 
 binary_bcd binary_bcd_ins_distance(.clk(clk),                          
                         .reset_n(reset_n),                                 
-                        .binary(distance_bus),    
+                        .binary(storage_out),    
                         .bcd(distance_decimal));									 
 									 							 
 ADC_Data ADC_Data_ins(.clk(clk),
@@ -165,7 +178,7 @@ ADC_Data ADC_Data_ins(.clk(clk),
 	*/
 	
 	
-	downcounter #(.period(1))
+	downcounter #(.period(10))
 	
 	downcounter_dds_clock(.clk(clk),
 									.reset_n(reset_n),
@@ -184,8 +197,9 @@ ADC_Data ADC_Data_ins(.clk(clk),
 	DDS_ins(.clk(clk), //system clock. Tuned to accept 500KHz
 				.reset_n(reset_n),
 				.en(dds_en),
-				.tuning_word(49), //Tuning word (how much to increment phase by. Max = LUT value. Space required 49
-				.amplitude(DAC_bus)
+			//	.tuning_word(49), //Tuning word (how much to increment phase by. Max = LUT value. Space required 49
+				.tuning_word(491),
+				.amplitude(carry_sig)
 		
 	);
 	
@@ -201,6 +215,12 @@ ADC_Data ADC_Data_ins(.clk(clk),
 	assign D8 = DAC_bus[8];
 	assign D9 = DAC_bus[9];
 
+	
+	AM_mod AM_mod_ins(.clk(clk), .reset_n(reset_n), .en(dds_en), .carry_sig(carry_sig), .distance(storage_out), .AM_sig(AM_sig));
+	
+	AM_mod_damp AM_mod_damp_ins(.clk(clk), .reset_n(reset_n), /*.en(en),*/ .carry_sig(carry_sig), .distance(storage_out), .AM_damp_sig(AM_damp_sig));
+	
+	FM_mod FM_mod_ins(.clk(clk), .reset_n(reset_n), .en(dds_en), /*.tuning_word(tuning_word),*/ .distance(storage_out), .FM_sig(FM_sig));
 		
 
 endmodule
